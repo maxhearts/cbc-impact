@@ -1,0 +1,41 @@
+# Per-bot configuration. Loaded by `bot run <name>`.
+
+[agent]
+# name defaults to the bot directory name; uncomment to override.
+# name = "ada"
+
+# --- backend ---
+# "openrouter" — works with OpenRouter and any OpenAI-compatible API.
+#                 Reads OPENROUTER_API_KEY from env (or set api_key here).
+# "ollama"     — local Ollama server.
+backend = "openrouter"
+
+# Pick a small model. Examples:
+#   openrouter: "meta-llama/llama-3.2-3b-instruct"
+#               "qwen/qwen-2.5-7b-instruct"
+#               "mistralai/mistral-7b-instruct"
+#   ollama:     "llama3.2:3b", "qwen2.5:3b", "mistral:7b"
+model = "meta-llama/llama-3.2-3b-instruct"
+
+# Optional overrides.
+# base_url = "https://openrouter.ai/api/v1"
+# api_key  = "sk-..."   # prefer env var OPENROUTER_API_KEY
+
+# --- generation ---
+max_tokens  = 512
+temperature = 0.7
+
+# --- agent loop ---
+# How many recent turns of THIS conversation to include in each call.
+# Past conversations come in compressed via EPISODIC summaries.
+history_window = 12
+
+# How many EPISODIC summaries to surface in the system prompt.
+episodic_limit = 20
+
+# Run consolidation automatically on session end (writes EPISODIC entry,
+# patches SEMANTIC). Disable for one-shot or stateless chats.
+auto_consolidate = true
+
+# Optional extra system-prompt text appended after memory.
+# extra_system = "You are speaking Spanish today."

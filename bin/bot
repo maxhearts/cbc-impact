@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Entry point for the bot CLI. Resolves to the package next to this script
+# and runs `python3 -m bot.cli`.
+set -euo pipefail
+
+_resolve() {
+  local src="$1" dir
+  while [[ -L "$src" ]]; do
+    dir="$(cd -P "$(dirname "$src")" && pwd)"
+    src="$(readlink "$src")"
+    [[ "$src" != /* ]] && src="$dir/$src"
+  done
+  cd -P "$(dirname "$src")" && pwd
+}
+SCRIPT_DIR="$(_resolve "${BASH_SOURCE[0]}")"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+exec env PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}" python3 -m bot.cli "$@"

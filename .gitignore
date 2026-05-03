@@ -4,3 +4,12 @@ dist/
 .env
 .env.local
 *.log
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+
+# bot framework: per-instance runtime state
+bots/*/logs/
+bots/*/archive/
