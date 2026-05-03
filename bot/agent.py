@@ -78,13 +78,14 @@ class Agent:
             client = make_client(self.config.backend, self.config.model, **kw)
         self.client = client
 
-    def turn(self, user_text: str) -> str:
+    def turn(self, user_text: str, *, extra: str = "") -> str:
         self.session.add_user(user_text)
+        merged_extra = "\n\n".join(p for p in (self.config.extra_system, extra) if p)
         system = build_system_prompt(
             self.config.name,
             self.memory,
             episodic_limit=self.config.episodic_limit,
-            extra=self.config.extra_system,
+            extra=merged_extra,
         )
         history = self.session.recent(self.config.history_window)
         messages = [Message("system", system), *history]

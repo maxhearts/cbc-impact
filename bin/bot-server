@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Entry point for the bot HTTP server. Resolves to the package next to
+# this script and runs `python3 -m bot.server`.
+set -euo pipefail
+
+_resolve() {
+  local src="$1" dir
+  while [[ -L "$src" ]]; do
+    dir="$(cd -P "$(dirname "$src")" && pwd)"
+    src="$(readlink "$src")"
+    [[ "$src" != /* ]] && src="$dir/$src"
+  done
+  cd -P "$(dirname "$src")" && pwd
+}
+SCRIPT_DIR="$(_resolve "${BASH_SOURCE[0]}")"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# If OPENROUTER_API_KEY isn't already in env, source interface/.env.local
+# (Vite's format — KEY=VALUE, no `export`). Lets `--llm haiku` work
+# without extra setup when the dev UI is already configured.
+if [[ -z "${OPENROUTER_API_KEY:-}" && -f "$ROOT/interface/.env.local" ]]; then
+  set -a
+  # shellcheck disable=SC1090,SC1091
+  source "$ROOT/interface/.env.local"
+  set +a
+fi
+
+exec env PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}" python3 -m bot.server "$@"

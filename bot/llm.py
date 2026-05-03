@@ -60,21 +60,26 @@ class OpenRouterClient(LLMClient):
                 "OPENROUTER_API_KEY not set. Export it or pass api_key=..."
             )
 
-    def complete(self, messages, *, max_tokens=512, temperature=0.7, timeout=None):
-        body = json.dumps(
-            {
-                "model": self.model,
-                "messages": [m.to_dict() for m in messages],
-                "max_tokens": max_tokens,
-                "temperature": temperature,
-            }
-        ).encode("utf-8")
+    def complete(self, messages, *, max_tokens=512, temperature=0.7, timeout=None, format=None):
+        payload: dict = {
+            "model": self.model,
+            "messages": [m.to_dict() for m in messages],
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+        }
+        # Mirror Ollama's `format="json"` knob — many OpenRouter models
+        # (Haiku included) honor `response_format: {type: "json_object"}`.
+        if format == "json":
+            payload["response_format"] = {"type": "json_object"}
+        body = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(
             f"{self.base_url}/chat/completions",
             data=body,
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {self.api_key}",
+                "HTTP-Referer": "http://localhost:5180",
+                "X-Title": "lingomaxxing",
             },
         )
         try:

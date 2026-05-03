@@ -1,0 +1,22 @@
+# Tutor bot — drives the Lingomaxxing Duolingo-style chat UI through
+# bot/server.py. Conversational replies come from this agent (with
+# SOUL/SEMANTIC/EPISODIC memory); a separate structured call in
+# bot/quiz.py optionally attaches a practice quiz.
+
+[agent]
+backend = "ollama"
+model   = "gemma3:1b"
+
+# Reply length. Conversational turns are short; quiz lead-ins are even
+# shorter. 200 tokens is plenty.
+max_tokens  = 220
+temperature = 0.6
+
+# A 1B model has a small context window; keep history tight. Past
+# sessions still come in compressed via EPISODIC summaries.
+history_window = 6
+episodic_limit = 10
+
+# Auto-consolidate so that the relationship accumulates across sessions
+# (favorite topics, recurring mistakes, etc.).
+auto_consolidate = true
