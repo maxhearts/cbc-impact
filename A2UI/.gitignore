@@ -1,0 +1,3 @@
+# Local-only artifacts of the renderer subprojects.
+.wireit/
+**/node_modules/
