@@ -17,36 +17,33 @@ from .session import Session
 
 
 CONSOLIDATION_PROMPT = """\
-You are a memory consolidation engine for a chatbot agent.
+Read the conversation. Output a single JSON object describing what to remember.
 
-You will be given (1) the agent's current SEMANTIC_MEMORY.md, and
-(2) the transcript of a finished conversation between the user and the
-agent.
-
-Produce ONLY a JSON object with this shape:
-
+Schema:
 {
-  "episodic": {
-    "summary": "<one short past-tense sentence describing what happened>",
-    "detail":  "<one short paragraph, slightly more context>"
-  },
-  "semantic_patches": [
-    {"topic": "<topic name>", "content": "<bullets to put under that topic>"}
+  "summary": "one short past-tense sentence",
+  "detail":  "one short paragraph",
+  "patches": [
+    {"topic": "<short noun phrase>", "content": "<bullets>"}
   ]
 }
 
-Rules:
-- Output JSON only. No prose, no code fences, no commentary.
-- Episodic summary is one short past-tense sentence. Detail is one short
-  paragraph. Skip move-by-move narration.
-- Only emit a semantic_patch when there is durable, generalizable
-  knowledge worth keeping (a fact about the user, a stated preference,
-  a decision, a correction the user made). Skip transient state.
-- If a topic already exists in SEMANTIC_MEMORY.md, the patch will
-  REPLACE that topic's body — so include any existing bullets you want
-  to keep.
-- If nothing is worth remembering semantically, return an empty list.
+Only include a patch when the user revealed durable info worth keeping
+across conversations (a name, a preference, a goal, a correction). If
+nothing fits, use an empty patches list. Do not emit anything except
+the JSON object.
 """
+
+# Anything before the EDIT-ABOVE marker in SEMANTIC_MEMORY.md is template
+# guidance for humans, not memory content. Strip it before showing the
+# small model.
+_SEMANTIC_MARKER = "<!-- DO NOT EDIT ABOVE THIS LINE -->"
+
+
+def _semantic_content(semantic_md: str) -> str:
+    if _SEMANTIC_MARKER in semantic_md:
+        return semantic_md.split(_SEMANTIC_MARKER, 1)[1].strip()
+    return semantic_md.strip()
 
 
 def consolidate(client: LLMClient, memory: Memory, session: Session) -> dict:
@@ -54,26 +51,32 @@ def consolidate(client: LLMClient, memory: Memory, session: Session) -> dict:
     if not session.turns:
         return {"episodic": None, "semantic_patches": []}
 
+    existing = _semantic_content(memory.semantic) or "(empty)"
     user_block = (
-        "=== current SEMANTIC_MEMORY.md ===\n"
-        f"{memory.semantic}\n\n"
-        "=== conversation transcript ===\n"
-        f"{session.transcript()}"
+        f"=== existing memory ===\n{existing}\n\n"
+        f"=== conversation ===\n{session.transcript()}"
     )
     msgs = [
         Message("system", CONSOLIDATION_PROMPT),
         Message("user", user_block),
     ]
-    raw = client.complete(msgs, max_tokens=1024, temperature=0.2)
+
+    # Use Ollama's structured-output mode if the client supports it.
+    kwargs: dict = {"max_tokens": 512, "temperature": 0.2, "timeout": 600}
+    if "format" in client.complete.__code__.co_varnames:
+        kwargs["format"] = "json"
+    raw = client.complete(msgs, **kwargs)
+
     obj = _parse_json(raw)
     if not obj:
         return {"episodic": None, "semantic_patches": [], "raw": raw}
 
-    ep = obj.get("episodic") or {}
-    if isinstance(ep, dict) and ep.get("summary"):
-        memory.append_episodic(ep["summary"], ep.get("detail", ""))
+    summary = obj.get("summary") or (obj.get("episodic") or {}).get("summary")
+    detail = obj.get("detail") or (obj.get("episodic") or {}).get("detail", "")
+    if summary:
+        memory.append_episodic(summary, detail or "")
 
-    patches = obj.get("semantic_patches") or []
+    patches = obj.get("patches") or obj.get("semantic_patches") or []
     if isinstance(patches, list) and patches:
         memory.write_semantic(_apply_patches(memory.semantic, patches))
 

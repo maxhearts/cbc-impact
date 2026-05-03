@@ -85,6 +85,8 @@ def cmd_run(args):
                 continue
             print(f"{args.name}> {reply}")
     finally:
+        if agent.config.auto_consolidate and agent.session.turns:
+            print(f"[{args.name}] consolidating memory...", flush=True)
         try:
             result = agent.end()
         except Exception as exc:

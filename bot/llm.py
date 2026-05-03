@@ -30,12 +30,15 @@ class Message:
 class LLMClient:
     """Minimal chat-completion interface."""
 
+    default_timeout: float = 120.0
+
     def complete(
         self,
         messages: list[Message],
         *,
         max_tokens: int = 512,
         temperature: float = 0.7,
+        timeout: float | None = None,
     ) -> str:
         raise NotImplementedError
 
@@ -57,7 +60,7 @@ class OpenRouterClient(LLMClient):
                 "OPENROUTER_API_KEY not set. Export it or pass api_key=..."
             )
 
-    def complete(self, messages, *, max_tokens=512, temperature=0.7):
+    def complete(self, messages, *, max_tokens=512, temperature=0.7, timeout=None):
         body = json.dumps(
             {
                 "model": self.model,
@@ -75,7 +78,7 @@ class OpenRouterClient(LLMClient):
             },
         )
         try:
-            with urllib.request.urlopen(req, timeout=120) as resp:
+            with urllib.request.urlopen(req, timeout=timeout or self.default_timeout) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", errors="replace")
@@ -90,22 +93,30 @@ class OllamaClient(LLMClient):
         self.model = model
         self.base_url = base_url.rstrip("/")
 
-    def complete(self, messages, *, max_tokens=512, temperature=0.7):
-        body = json.dumps(
-            {
-                "model": self.model,
-                "messages": [m.to_dict() for m in messages],
-                "stream": False,
-                "options": {"num_predict": max_tokens, "temperature": temperature},
-            }
-        ).encode("utf-8")
+    # Default longer than OpenRouter — local models are slow on cold load and
+    # consolidation calls in particular can churn for a while on tiny CPUs.
+    default_timeout = 600.0
+
+    def complete(self, messages, *, max_tokens=512, temperature=0.7, timeout=None, format=None):
+        payload: dict = {
+            "model": self.model,
+            "messages": [m.to_dict() for m in messages],
+            "stream": False,
+            "options": {"num_predict": max_tokens, "temperature": temperature},
+        }
+        # Ollama supports a structured-output mode: format="json" forces the
+        # model to emit valid JSON. Useful for the consolidation pass on
+        # small models that otherwise drift into prose.
+        if format is not None:
+            payload["format"] = format
+        body = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(
             f"{self.base_url}/api/chat",
             data=body,
             headers={"Content-Type": "application/json"},
         )
         try:
-            with urllib.request.urlopen(req, timeout=120) as resp:
+            with urllib.request.urlopen(req, timeout=timeout or self.default_timeout) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             detail = e.read().decode("utf-8", errors="replace")

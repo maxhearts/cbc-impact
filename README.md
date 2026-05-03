@@ -28,11 +28,21 @@ Backends: OpenRouter (or any OpenAI-compatible host) and Ollama.
 
 ### Quickstart
 
-    export OPENROUTER_API_KEY=...
+Default backend is local Ollama with `gemma3:1b` — runs on CPU, no API
+key, no network.
+
+    ollama pull gemma3:1b
+    bin/bot run gemma          # ships pre-scaffolded with default config
+
+Or scaffold a fresh bot and customize:
+
     bin/bot new ada
     $EDITOR bots/ada/workspace/SOUL.md   # write a personality
-    $EDITOR bots/ada/config.toml         # pick a model
+    $EDITOR bots/ada/config.toml         # change model / switch to OpenRouter
     bin/bot run ada
+
+To use OpenRouter instead, set `backend = "openrouter"` in `config.toml`
+and export `OPENROUTER_API_KEY`.
 
 The REPL streams turns into `bots/ada/logs/session_<id>.jsonl`. On
 session end (Ctrl-D), consolidation runs: a structured LLM call rolls
