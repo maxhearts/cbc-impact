@@ -37,6 +37,7 @@ const statusText = document.getElementById("status-text") as HTMLSpanElement;
 const nativeSel = document.getElementById("native-lang") as HTMLSelectElement;
 const targetSel = document.getElementById("target-lang") as HTMLSelectElement;
 const swapBtn = document.getElementById("swap-lang") as HTMLButtonElement;
+const modelChip = document.getElementById("model-chip") as HTMLSpanElement;
 
 // ---- language pair selector ----------------------------------------------
 
@@ -235,3 +236,82 @@ appendAgentMessage({
   text: greet(nativeSel.value, targetSel.value),
   a2ui: [],
 });
+
+// ---- model badge --------------------------------------------------------
+
+interface ModelInfo {
+  model: string;
+  bot?: string;
+  backend?: string;
+}
+
+/**
+ * Pretty-print the upstream model id. Examples:
+ *   "anthropic/claude-haiku-4.5" → "Haiku 4.5"
+ *   "anthropic/claude-sonnet-4-6" → "Sonnet 4.6"
+ *   "gemma3:1b" → "Gemma 3 · 1B"
+ *   "llama3.2:3b" → "Llama 3.2 · 3B"
+ *   anything else → as-is
+ */
+function formatModel(raw: string): string {
+  if (!raw) return "";
+  const lower = raw.toLowerCase();
+
+  // Anthropic Claude — drop vendor prefix, capitalize family.
+  const claude = /(?:^|\/)claude-(haiku|sonnet|opus)[-_]?([\w.\-]+)?/i.exec(lower);
+  if (claude) {
+    const family = claude[1][0].toUpperCase() + claude[1].slice(1);
+    const ver = (claude[2] ?? "").replace(/-/g, ".");
+    return ver ? `${family} ${ver}` : family;
+  }
+
+  // Ollama-style "<name><ver>:<tag>"  e.g. gemma3:1b, llama3.2:3b, qwen2.5:7b
+  const ollama = /^([a-z]+)(\d[\w.]*)?(?::([\w.\-]+))?$/i.exec(lower);
+  if (ollama) {
+    const name = ollama[1][0].toUpperCase() + ollama[1].slice(1);
+    const ver = ollama[2] ? ` ${ollama[2]}` : "";
+    const tag = ollama[3] ? ` · ${ollama[3].toUpperCase()}` : "";
+    return `${name}${ver}${tag}`;
+  }
+
+  return raw;
+}
+
+function modelFamily(raw: string): "cloud" | "local" | "" {
+  if (!raw) return "";
+  const lower = raw.toLowerCase();
+  if (lower.includes("claude") || lower.includes("gpt") || lower.includes("gemini")) {
+    return "cloud";
+  }
+  // Ollama / open-weights → assume local.
+  if (/^(gemma|llama|qwen|mistral|phi|deepseek|smol)/.test(lower)) {
+    return "local";
+  }
+  return "";
+}
+
+async function refreshModelChip() {
+  try {
+    const r = await fetch("/chat/info");
+    if (!r.ok) {
+      modelChip.hidden = true;
+      return;
+    }
+    const info = (await r.json()) as ModelInfo;
+    const label = formatModel(info.model);
+    if (!label) {
+      modelChip.hidden = true;
+      return;
+    }
+    modelChip.textContent = label;
+    modelChip.title = info.model + (info.bot ? ` · ${info.bot}` : "");
+    modelChip.classList.remove("cloud", "local");
+    const fam = modelFamily(info.model);
+    if (fam) modelChip.classList.add(fam);
+    modelChip.hidden = false;
+  } catch {
+    modelChip.hidden = true;
+  }
+}
+
+refreshModelChip();

@@ -227,6 +227,49 @@ export function chatApiPlugin(): Plugin {
   return {
     name: "impact-interface:chat-api",
     configureServer(server: ViteDevServer) {
+      // NOTE: more-specific routes MUST come first — Vite's middleware
+      // does prefix matching, so `/chat` would otherwise swallow
+      // `/chat/info` and `/chat/reset`.
+
+      // Surface the upstream model + bot name so the frontend can show
+      // which backend is active. Just a thin proxy of /health.
+      server.middlewares.use("/chat/info", async (req, res) => {
+        if (req.method !== "GET") return send(res, 405, { error: "GET required" });
+        try {
+          const r = await fetch(`${baseUrl}/health`);
+          const text = await r.text();
+          if (!r.ok) {
+            return send(res, 502, {
+              error: `bot-server ${r.status}: ${text.slice(0, 200)}`,
+            });
+          }
+          let data: { model?: string; bot?: string; backend?: string };
+          try {
+            data = JSON.parse(text);
+          } catch {
+            return send(res, 502, { error: "bot-server returned non-JSON for /health" });
+          }
+          send(res, 200, {
+            model: data.model ?? "",
+            bot: data.bot ?? "",
+            backend: data.backend ?? "",
+          });
+        } catch (err: any) {
+          send(res, 502, { error: err.message ?? String(err) });
+        }
+      });
+
+      server.middlewares.use("/chat/reset", async (req, res) => {
+        if (req.method !== "POST") return send(res, 405, { error: "POST required" });
+        try {
+          await callBotServer(baseUrl, "/chat/reset", {});
+          send(res, 200, { ok: true });
+        } catch (err: any) {
+          console.error("[chat-api] reset error:", err);
+          send(res, 502, { error: err.message ?? String(err) });
+        }
+      });
+
       server.middlewares.use("/chat", async (req, res) => {
         if (req.method !== "POST") return send(res, 405, { error: "POST required" });
 
@@ -264,17 +307,7 @@ export function chatApiPlugin(): Plugin {
           });
         }
       });
-
-      server.middlewares.use("/chat/reset", async (req, res) => {
-        if (req.method !== "POST") return send(res, 405, { error: "POST required" });
-        try {
-          await callBotServer(baseUrl, "/chat/reset", {});
-          send(res, 200, { ok: true });
-        } catch (err: any) {
-          console.error("[chat-api] reset error:", err);
-          send(res, 502, { error: err.message ?? String(err) });
-        }
-      });
     },
   };
 }
+
