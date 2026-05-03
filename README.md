@@ -78,13 +78,3 @@ prompt plus the last `history_window` turns of the current session.
 `bots/<name>/config.toml` — backend, model, generation params, history
 window, episodic limit, auto-consolidate toggle. See
 `template/config.toml` for the full set with comments.
-
-### Inspiration & differences
-
-Built off the `harness` agent framework on the `master` branch sibling
-project. Carries over the SOUL/SEMANTIC/EPISODIC tiering and the
-session-end consolidation idea. Replaces the Claude-Code-CLI core (and
-its plugin/hook surface, tool use, self-editing memory) with a plain
-HTTP chat-completions client and an explicit consolidation pass — both
-because small open-weight models can't be trusted to drive those
-mechanisms reliably.
