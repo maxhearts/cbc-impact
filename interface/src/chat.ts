@@ -202,7 +202,7 @@ form.addEventListener("submit", async (e) => {
   appendUserMessage(text);
   input.value = "";
   input.style.height = "auto";
-  setStatus("thinking", `${currentModelLabel || "tutor"} is thinking…`);
+  setStatus("thinking", `${AGENT_NAME} is thinking…`);
 
   try {
     const { native, target } = currentPair();
@@ -244,9 +244,6 @@ interface ModelInfo {
   bot?: string;
   backend?: string;
 }
-
-// Set by refreshModelChip; used by the "<model> is thinking…" status.
-let currentModelLabel = "";
 
 /**
  * Pretty-print the upstream model id. Examples:
@@ -298,14 +295,12 @@ async function refreshModelChip() {
     const r = await fetch("/chat/info");
     if (!r.ok) {
       modelChip.hidden = true;
-      currentModelLabel = "";
       return;
     }
     const info = (await r.json()) as ModelInfo;
     const label = formatModel(info.model);
     if (!label) {
       modelChip.hidden = true;
-      currentModelLabel = "";
       return;
     }
     modelChip.textContent = label;
@@ -314,10 +309,8 @@ async function refreshModelChip() {
     const fam = modelFamily(info.model);
     if (fam) modelChip.classList.add(fam);
     modelChip.hidden = false;
-    currentModelLabel = label;
   } catch {
     modelChip.hidden = true;
-    currentModelLabel = "";
   }
 }
 
