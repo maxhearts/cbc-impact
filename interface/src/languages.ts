@@ -45,6 +45,7 @@ export const LANGUAGES: Language[] = [
   { code: "zh",    name: "Mandarin Chinese",flag: "🇨🇳" },
   { code: "yue",   name: "Cantonese",       flag: "🇭🇰" },
   { code: "sw",    name: "Swahili",         flag: "🇰🇪" },
+  { code: "xh",    name: "isiXhosa",        flag: "🇿🇦" },
   { code: "la",    name: "Latin",           flag: "🏛️" },
 ];
 

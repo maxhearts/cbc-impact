@@ -48,6 +48,7 @@ const TABLE: Record<string, Greeter> = {
   zh: (t) => `你好！我是麦克斯。准备好练习${t}了吗？`,
   yue: (t) => `你好！我係Maxx。準備好練習${t}未呀？`,
   sw: (t) => `Habari! Mimi ni Maxx. Uko tayari kufanya mazoezi ya ${t}?`,
+  xh: (t) => `Molo! NdinguMaxx. Ulungele ukuziqhelisa i-${t}?`,
   la: (t) => `Salve! Maxx sum. Esne paratus ${t} exercere?`,
 };
 
