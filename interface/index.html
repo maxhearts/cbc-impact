@@ -126,23 +126,26 @@
       .lang-pair button.swap:active { transform: translateY(1px); border-bottom-width: 2px; }
       header h1 {
         margin: 0;
-        font-size: 22px;
+        font-size: 32px;
         font-weight: 800;
         color: var(--text);
         letter-spacing: -0.02em;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
       }
       header h1 .mark {
-        display: inline-block;
-        width: 28px; height: 28px;
-        margin-right: 6px;
-        vertical-align: -6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 38px; height: 38px;
         background: var(--green);
-        border-radius: 8px;
-        text-align: center; line-height: 28px;
+        border-radius: 10px;
         color: white;
         font-weight: 900;
-        font-size: 16px;
-        box-shadow: 0 2px 0 var(--green-dark);
+        font-size: 22px;
+        box-shadow: 0 3px 0 var(--green-dark);
       }
       header .status {
         font-size: 12px;
